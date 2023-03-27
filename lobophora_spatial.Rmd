@@ -1,0 +1,2455 @@
+---
+title: "lobophora_spatial"
+author: "L. Enright"
+date: "2023-01-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(lubridate)
+library(janitor)
+library(tidyverse)
+library(lattice)
+library(here)
+library(ggpubr)
+library(reshape2)
+library(gridExtra)
+library(dplyr)
+```
+
+#Ambient Plots
+
+### A4 2x2
+
+```{r}
+T0_A4_2x2 <- read_csv(here("data", "A4_2x2_Annotations", "annotations_T0.csv")) %>% clean_names
+
+T3_A4_2x2 <- read_csv(here("data", "A4_2x2_Annotations", "annotations_T3.csv")) %>% clean_names
+
+T6_A4_2x2 <- read_csv(here("data", "A4_2x2_Annotations", "annotations_T6_orange.csv")) %>% clean_names
+
+T9_A4_2x2 <- read_csv(here("data", "A4_2x2_Annotations", "annotations_T9.csv")) %>% clean_names
+
+T12_A4_2x2 <- read_csv(here("data", "A4_2x2_Annotations", "annotations_T12.csv")) %>% clean_names
+```
+
+```{r}
+#combining for all timepoints
+A4_2x2_T0_3 <- rbind(T0_A4_2x2, T3_A4_2x2)
+A4_2x2_T6_9 <- rbind(T6_A4_2x2, T9_A4_2x2)
+A4_2x2_T0_9 <- rbind(A4_2x2_T0_3, A4_2x2_T6_9)
+A4_2x2_annual <- rbind(A4_2x2_T0_9, T12_A4_2x2)
+```
+
+```{r}
+# add an additional column to indicate nutrient levels
+
+A4_2x2_annual_mutate <- A4_2x2_annual %>%
+  add_column(nutrients = "ambient")
+
+# add additional column to indicate lobophora presence 
+# originally separated into lobo_enc, lobo_fol, other, and out or cage. However, Tom said that it's better to combine lobo encrusting with other "available settlement" substrates as it's hard to be confident with lobophora enrusting ID in the photomosaics 
+
+A4_2x2_annual_mutate <- A4_2x2_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                   label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+A4_2x2_annual_mutate <- transform(A4_2x2_annual_mutate,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+                      
+```
+
+```{r}
+A4_2x2_annual_mutate_coral <- A4_2x2_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "CCA" ~ "Available Substrate",
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                    label == "Lobo_fol" ~ "Foliose Lobophora",
+                                    label == "Cau_pelt" ~ "Macroalgae",
+                                    label == "Cau_race" ~ "Macroalgae",
+                                    label == "Cau_ser" ~ "Macroalgae",
+                                    label == "Dic_sp" ~ "Macroalgae",
+                                    label == "Hal_disc" ~ "Macroalgae",
+                                    label == "Hal_mac" ~ "Macroalgae",
+                                    label == "Hal_min" ~ "Macroalgae",
+                                    label == "Hal_sp" ~ "Macroalgae",
+                                    label == "Pad_bor" ~ "Macroalgae",
+                                    label == "Sar_pac" ~ "Macroalgae",
+                                    label == "Tur_orn" ~ "Macroalgae",
+                                   label == "Monti" ~ "Montipora",
+                                   label == "Poc" ~ "Corals (Pocillopora and Acropora)",
+                                   label == "Acr_bra" ~ "Corals (Pocillopora and Acropora)",
+                                   label == "Acr_dig" ~ "Corals (Pocillopora and Acropora)",
+                                   label == "Acr_enc" ~ "Corals (Pocillopora and Acropora)",
+                                   label == "Acr_tab" ~ "Corals (Pocillopora and Acropora)",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+A4_2x2_annual_mutate_coral
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+A4_2x2_annual_mutate_coral <- transform(A4_2x2_annual_mutate_coral,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+```
+
+
+```{r}
+
+
+summary_A4_2x2 <- A4_2x2_annual_mutate %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence) %>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+ complete(timepoint, nutrients, plot, herbivory, lobo_presence,
+           fill = list(n = 0, percent_cover = 0))
+
+# summary_A4_2x2 
+
+
+# summary_A4_2x2 <- A4_2x2_annual_mutate %>%
+ # group_by(timepoint, nutrients, plot, herbivory, lobo_presence) %>%
+ # tally()
+  
+ # count(lobo_presence)
+#  rename(summary_A4_2x2, lobo_count = n) %>%
+ # mutate(percent_cover = ((lobo_count/225)*100)) %>%
+#  ungroup() %>%
+ # complete(timepoint, nutrients, plot, herbivory, fill = list(count =0)) %>%
+ #  distinct()
+  
+```
+
+```{r}
+summary_A4_2x2_coral <- A4_2x2_annual_mutate_coral %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence) %>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+    complete(timepoint, nutrients, plot, herbivory, lobo_presence,
+             fill = list(n = 0, percent_cover = 0))
+
+summary_A4_2x2_coral
+
+summary_open_lobophora_plot <- ggplot(summary_A4_2x2_coral, aes(x = timepoint, y = percent_cover, color = lobo_presence, shape = nutrients)) +
+  geom_line(aes(group = lobo_presence))
+
+summary_open_lobophora_plot
+```
+```{r}
+summary_open_lobophora_plot <- ggplot(summary_A4_2x2_coral, aes(x = timepoint, y = percent_cover, color = lobo_presence, shape = nutrients)) +
+  geom_line(aes(group = lobo_presence))
+
+summary_open_lobophora_plot
+```
+
+
+
+
+```{r}
+summary_A4_2x2_coral %>%
+  select(timepoint, percent_cover, lobo_presence) %>%
+  ggplot(aes(x = timepoint, y = percent_cover, fill = lobo_presence)) +
+  geom_bar(stat = "identity") +
+   scale_fill_manual(values = c("#b5de2b", "#3e4989", "#6ece58", "#35b779", "#26828e", "#D3D3D3", "#5A5A5A"))
+
+```
+
+
+### B2 2x2
+
+```{r}
+T0_B2_2x2 <- read_csv(here("data", "B2_2x2_Annotations", "annotations_T0.csv")) %>% clean_names
+
+T3_B2_2x2 <- read_csv(here("data", "B2_2x2_Annotations", "annotations_T3.csv")) %>% clean_names
+
+T6_B2_2x2 <- read_csv(here("data", "B2_2x2_Annotations", "annotations_T6.csv")) %>% clean_names
+
+T9_B2_2x2 <- read_csv(here("data", "B2_2x2_Annotations", "annotations_T9.csv")) %>% clean_names
+
+T12_B2_2x2 <- read_csv(here("data", "B2_2x2_Annotations", "annotations_T12.csv")) %>% clean_names
+```
+
+
+```{r}
+#combining for all timepoints
+B2_2x2_T0_3 <- rbind(T0_B2_2x2, T3_B2_2x2)
+B2_2x2_T6_9 <- rbind(T6_B2_2x2, T9_B2_2x2)
+B2_2x2_T0_9 <- rbind(B2_2x2_T0_3, B2_2x2_T6_9)
+B2_2x2_annual <- rbind(B2_2x2_T0_9, T12_B2_2x2)
+```
+
+```{r}
+# add an additional column to indicate nutrient levels
+
+B2_2x2_annual_mutate <- B2_2x2_annual %>%
+  add_column(nutrients = "ambient")
+
+# add additional column to indicate lobophora presence 
+# originally separated into lobo_enc, lobo_fol, other, and out or cage. However, Tom said that it's better to combine lobo encrusting with other "available settlement" substrates as it's hard to be confident with lobophora enrusting ID in the photomosaics 
+
+B2_2x2_annual_mutate <- B2_2x2_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                   label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+B2_2x2_annual_mutate <- transform(B2_2x2_annual_mutate,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+```
+
+
+```{r}
+summary_B2_2x2 <- B2_2x2_annual_mutate %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence) %>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+    complete(timepoint, nutrients, plot, herbivory, lobo_presence,
+             fill = list(n = 0, percent_cover = 0))
+
+summary_B2_2x2 
+```
+
+
+### C2 2x2
+
+```{r}
+T0_C2_2x2 <- read_csv(here("data", "C2_2x2_Annotations", "annotations_T0.csv")) %>% clean_names
+
+T3_C2_2x2 <- read_csv(here("data", "C2_2x2_Annotations", "annotations_T3.csv")) %>% clean_names
+
+T6_C2_2x2 <- read_csv(here("data", "C2_2x2_Annotations", "annotations_T6_orange.csv")) %>% clean_names
+
+T9_C2_2x2 <- read_csv(here("data", "C2_2x2_Annotations", "annotations_T9.csv")) %>% clean_names
+
+T12_C2_2x2 <- read_csv(here("data", "C2_2x2_Annotations", "annotations_T12.csv")) %>% clean_names
+```
+
+```{r}
+#combining for all timepoints
+C2_2x2_T0_3 <- rbind(T0_C2_2x2, T3_C2_2x2)
+C2_2x2_T6_9 <- rbind(T6_C2_2x2, T9_C2_2x2)
+C2_2x2_T0_9 <- rbind(C2_2x2_T0_3, C2_2x2_T6_9)
+C2_2x2_annual <- rbind(C2_2x2_T0_9, T12_C2_2x2)
+```
+
+```{r}
+# add an additional column to indicate nutrient levels
+
+C2_2x2_annual_mutate <- C2_2x2_annual %>%
+  add_column(nutrients = "ambient")
+
+# add additional column to indicate lobophora presence 
+# originally separated into lobo_enc, lobo_fol, other, and out or cage. However, Tom said that it's better to combine lobo encrusting with other "available settlement" substrates as it's hard to be confident with lobophora enrusting ID in the photomosaics 
+
+#double check these categories before copying and pasting into other plots
+
+C2_2x2_annual_mutate <- C2_2x2_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                   label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+C2_2x2_annual_mutate <- transform(C2_2x2_annual_mutate,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+                       
+
+```
+
+```{r}
+#make a summary table 
+
+summary_C2_2x2 <- C2_2x2_annual_mutate %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence) %>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100))
+
+#didn't need to use ungroup() and complete() because all categories were present in all timepoints
+
+summary_C2_2x2
+
+```
+
+### D1 2x2
+
+```{r}
+T0_D1_2x2 <- read_csv(here("data", "D1_2x2_Annotations", "annotations_T0.csv")) %>% clean_names
+
+T3_D1_2x2 <- read_csv(here("data", "D1_2x2_Annotations", "annotations_T3.csv")) %>% clean_names
+
+T6_D1_2x2 <- read_csv(here("data", "D1_2x2_Annotations", "annotations_T6.csv")) %>% clean_names
+
+T9_D1_2x2 <- read_csv(here("data", "D1_2x2_Annotations", "annotations_T9.csv")) %>% clean_names
+
+T12_D1_2x2 <- read_csv(here("data", "D1_2x2_Annotations", "annotations_T12.csv")) %>% clean_names
+```
+
+```{r}
+#combining for all timepoints
+D1_2x2_T0_3 <- rbind(T0_D1_2x2, T3_D1_2x2)
+D1_2x2_T6_9 <- rbind(T6_D1_2x2, T9_D1_2x2)
+D1_2x2_T0_9 <- rbind(D1_2x2_T0_3, D1_2x2_T6_9)
+D1_2x2_annual <- rbind(D1_2x2_T0_9, T12_D1_2x2)
+```
+
+```{r}
+# add an additional column to indicate nutrient levels
+
+D1_2x2_annual_mutate <- D1_2x2_annual %>%
+  add_column(nutrients = "ambient")
+
+# add additional column to indicate lobophora presence 
+# originally separated into lobo_enc, lobo_fol, other, and out or cage. However, Tom said that it's better to combine lobo encrusting with other "available settlement" substrates as it's hard to be confident with lobophora enrusting ID in the photomosaics 
+
+D1_2x2_annual_mutate <- D1_2x2_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                   label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+D1_2x2_annual_mutate <- transform(D1_2x2_annual_mutate,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+```
+
+```{r}
+summary_D1_2x2 <- D1_2x2_annual_mutate %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence) %>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+    complete(timepoint, nutrients, plot, herbivory, lobo_presence,
+             fill = list(n = 0, percent_cover = 0))
+
+summary_D1_2x2 
+```
+
+#Ambient Plots
+
+### A3 2x2
+
+```{r}
+T0_A3_2x2 <- read_csv(here("data", "A3_2x2_Annotations", "annotations_T0.csv")) %>% clean_names
+
+T3_A3_2x2 <- read_csv(here("data", "A3_2x2_Annotations", "annotations_T3.csv")) %>% clean_names
+
+T6_A3_2x2 <- read_csv(here("data", "A3_2x2_Annotations", "annotations_T6.csv")) %>% clean_names
+
+T9_A3_2x2 <- read_csv(here("data", "A3_2x2_Annotations", "annotations_T9.csv")) %>% clean_names
+
+T12_A3_2x2 <- read_csv(here("data", "A3_2x2_Annotations", "annotations_T12.csv")) %>% clean_names
+```
+
+
+```{r}
+#combining for all timepoints
+A3_2x2_T0_3 <- rbind(T0_A3_2x2, T3_A3_2x2)
+A3_2x2_T6_9 <- rbind(T6_A3_2x2, T9_A3_2x2)
+A3_2x2_T0_9 <- rbind(A3_2x2_T0_3, A3_2x2_T6_9)
+A3_2x2_annual <- rbind(A3_2x2_T0_9, T12_A3_2x2)
+```
+
+
+```{r}
+# add an additional column to indicate nutrient levels
+
+A3_2x2_annual_mutate <- A3_2x2_annual %>%
+  add_column(nutrients = "enriched")
+
+# add additional column to indicate lobophora presence 
+# originally separated into lobo_enc, lobo_fol, other, and out or cage. However, Tom said that it's better to combine lobo encrusting with other "available settlement" substrates as it's hard to be confident with lobophora enrusting ID in the photomosaics 
+
+A3_2x2_annual_mutate <- A3_2x2_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                   label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+A3_2x2_annual_mutate <- transform(A3_2x2_annual_mutate,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+
+```
+
+
+```{r}
+summary_A3_2x2 <- A3_2x2_annual_mutate %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence)%>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+    complete(timepoint, nutrients, plot, herbivory, lobo_presence,
+             fill = list(n = 0, percent_cover = 0))
+
+summary_A3_2x2 
+```
+
+### B1 2x2
+
+```{r}
+T0_B1_2x2 <- read_csv(here("data", "B1_2x2_Annotations", "annotations_T0.csv")) %>% clean_names
+
+T3_B1_2x2 <- read_csv(here("data", "B1_2x2_Annotations", "annotations_T3.csv")) %>% clean_names
+
+T6_B1_2x2 <- read_csv(here("data", "B1_2x2_Annotations", "annotations_T6.csv")) %>% clean_names
+
+T9_B1_2x2 <- read_csv(here("data", "B1_2x2_Annotations", "annotations_T9.csv")) %>% clean_names
+
+T12_B1_2x2 <- read_csv(here("data", "B1_2x2_Annotations", "annotations_T12.csv")) %>% clean_names
+```
+
+```{r}
+#combining for all timepoints
+B1_2x2_T0_3 <- rbind(T0_B1_2x2, T3_B1_2x2)
+B1_2x2_T6_9 <- rbind(T6_B1_2x2, T9_B1_2x2)
+B1_2x2_T0_9 <- rbind(B1_2x2_T0_3, B1_2x2_T6_9)
+B1_2x2_annual <- rbind(B1_2x2_T0_9, T12_B1_2x2)
+```
+
+```{r}
+# add an additional column to indicate nutrient levels
+
+B1_2x2_annual_mutate <- B1_2x2_annual %>%
+  add_column(nutrients = "enriched")
+
+# add additional column to indicate lobophora presence 
+# originally separated into lobo_enc, lobo_fol, other, and out or cage. However, Tom said that it's better to combine lobo encrusting with other "available settlement" substrates as it's hard to be confident with lobophora enrusting ID in the photomosaics 
+
+B1_2x2_annual_mutate <- B1_2x2_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                   label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+B1_2x2_annual_mutate <- transform(B1_2x2_annual_mutate,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+```
+
+```{r}
+summary_B1_2x2 <- B1_2x2_annual_mutate %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence)%>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+    complete(timepoint, nutrients, plot, herbivory, lobo_presence,
+             fill = list(n = 0, percent_cover = 0))
+
+summary_B1_2x2 
+```
+
+
+### C4 2x2
+
+```{r}
+T0_C4_2x2 <- read_csv(here("data", "C4_2x2_Annotations", "annotations_T0.csv")) %>% clean_names
+
+T3_C4_2x2 <- read_csv(here("data", "C4_2x2_Annotations", "annotations_T3.csv")) %>% clean_names
+
+T6_C4_2x2 <- read_csv(here("data", "C4_2x2_Annotations", "annotations_T6.csv")) %>% clean_names
+
+T9_C4_2x2 <- read_csv(here("data", "C4_2x2_Annotations", "annotations_T9.csv")) %>% clean_names
+
+T12_C4_2x2 <- read_csv(here("data", "C4_2x2_Annotations", "annotations_T12.csv")) %>% clean_names
+```
+
+```{r}
+#combining for all timepoints
+C4_2x2_T0_3 <- rbind(T0_C4_2x2, T3_C4_2x2)
+C4_2x2_T6_9 <- rbind(T6_C4_2x2, T9_C4_2x2)
+C4_2x2_T0_9 <- rbind(C4_2x2_T0_3, C4_2x2_T6_9)
+C4_2x2_annual <- rbind(C4_2x2_T0_9, T12_C4_2x2)
+```
+
+```{r}
+# add an additional column to indicate nutrient levels
+
+C4_2x2_annual_mutate <- C4_2x2_annual %>%
+  add_column(nutrients = "enriched")
+
+# add additional column to indicate lobophora presence 
+# originally separated into lobo_enc, lobo_fol, other, and out or cage. However, Tom said that it's better to combine lobo encrusting with other "available settlement" substrates as it's hard to be confident with lobophora enrusting ID in the photomosaics 
+
+C4_2x2_annual_mutate <- C4_2x2_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                   label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+C4_2x2_annual_mutate <- transform(C4_2x2_annual_mutate,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+```
+
+```{r}
+summary_C4_2x2 <- C4_2x2_annual_mutate %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence)%>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+    complete(timepoint, nutrients, plot, herbivory, lobo_presence,
+             fill = list(n = 0, percent_cover = 0))
+
+summary_C4_2x2 
+```
+
+
+### D3 2x2
+
+```{r}
+T0_D3_2x2 <- read_csv(here("data", "D3_2x2_Annotations", "annotations_T0.csv")) %>% clean_names
+
+T3_D3_2x2 <- read_csv(here("data", "D3_2x2_Annotations", "annotations_T3.csv")) %>% clean_names
+
+T6_D3_2x2 <- read_csv(here("data", "D3_2x2_Annotations", "annotations_T6.csv")) %>% clean_names
+
+T9_D3_2x2 <- read_csv(here("data", "D3_2x2_Annotations", "annotations_T9.csv")) %>% clean_names
+
+T12_D3_2x2 <- read_csv(here("data", "D3_2x2_Annotations", "annotations_T12.csv")) %>% clean_names
+```
+
+```{r}
+#combining for all timepoints
+D3_2x2_T0_3 <- rbind(T0_D3_2x2, T3_D3_2x2)
+D3_2x2_T6_9 <- rbind(T6_D3_2x2, T9_D3_2x2)
+D3_2x2_T0_9 <- rbind(D3_2x2_T0_3, D3_2x2_T6_9)
+D3_2x2_annual <- rbind(D3_2x2_T0_9, T12_D3_2x2)
+```
+
+
+```{r}
+# add an additional column to indicate nutrient levels
+
+D3_2x2_annual_mutate <- D3_2x2_annual %>%
+  add_column(nutrients = "enriched")
+
+# add additional column to indicate lobophora presence 
+# originally separated into lobo_enc, lobo_fol, other, and out or cage. However, Tom said that it's better to combine lobo encrusting with other "available settlement" substrates as it's hard to be confident with lobophora enrusting ID in the photomosaics 
+
+D3_2x2_annual_mutate <- D3_2x2_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                   label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+D3_2x2_annual_mutate <- transform(D3_2x2_annual_mutate,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+```
+
+```{r}
+summary_D3_2x2 <- D3_2x2_annual_mutate %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence)%>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+    complete(timepoint, nutrients, plot, herbivory, lobo_presence,
+             fill = list(n = 0, percent_cover = 0))
+
+summary_D3_2x2 
+```
+
+
+#2x2 plots (enriched and ambient plots)
+
+```{r}
+#combine the summary table from each plot 
+
+summary_2x2_A4_B2 <- rbind(summary_A4_2x2, summary_B2_2x2) #combine A4 and B2
+
+summary_2x2_C2_D1 <- rbind(summary_C2_2x2, summary_D1_2x2) #combine C2 and D1
+
+summary_2x2_ambient <- rbind(summary_2x2_A4_B2, summary_2x2_C2_D1) #combine ambient
+
+summary_2x2_A3_B1 <- rbind(summary_A4_2x2, summary_B1_2x2) #combine A3 and B1
+
+summary_2x2_C4_D3 <- rbind(summary_C4_2x2, summary_D3_2x2) #combine C2 and D1
+
+summary_2x2_enriched <- rbind(summary_2x2_A3_B1, summary_2x2_C4_D3) #combine enriched
+
+summary_2x2 <- rbind(summary_2x2_ambient, summary_2x2_enriched) #combine ambient and enriched
+```
+
+
+```{r}
+# make a summary table 
+
+summary_2x2_lobophora <- summary_2x2 %>%
+  subset(lobo_presence %in% c('Available Substrate','Foliose Lobophora')) %>%
+  group_by(timepoint, lobo_presence, nutrients, herbivory) %>%
+  summarize(percent_avg = mean(percent_cover),
+            percent_sd = sd(percent_cover),
+            percent_se = percent_sd/sqrt(4))
+
+summary_2x2_lobophora
+
+
+summary_2x2_lobophora_plot <- ggplot(summary_2x2_lobophora, aes(x = timepoint, y = percent_avg, color = lobo_presence, shape = nutrients)) +
+  geom_point(size = 3, position=position_dodge(width=0.5)) +
+  geom_errorbar(aes(ymin = percent_avg - percent_se, 
+                    ymax = percent_avg + percent_se),
+                    position = position_dodge(width=0.5),
+                    width = 0.15) +
+  ylim(0,80) +
+  labs(title = "Average Percent Cover of Lobophora in 2x2 plots (n = 4)") +
+  theme(plot.title = element_text(size=8)) +
+  scale_color_manual(values=c("dark grey", "dark green")) 
+
+summary_2x2_lobophora_plot
+           
+```
+
+
+
+```{r}
+x <- summary_2x2 %>%
+  subset(lobo_presence %in% c('Available Substrate','Foliose Lobophora')) %>%
+  subset(nutrients %in% c('ambient')) %>%
+  group_by(timepoint, lobo_presence, nutrients, herbivory) %>%
+  summarize(percent_avg = mean(percent_cover),
+            percent_sd = sd(percent_cover),
+            percent_se = percent_sd/sqrt(4))
+
+ggplot() + geom_bar(aes(y = percent_avg, x = timepoint, fill = lobo_presence), data = x,
+                           stat="identity")
+
+```
+
+
+#Ambient Plots
+
+### A4 Open
+
+```{r}
+T0_A4_open <- read_csv(here("data", "A4_open_annotations", "annotations_T0.csv")) %>% clean_names
+
+T3_A4_open <- read_csv(here("data", "A4_open_annotations", "annotations_T3.csv")) %>% clean_names
+
+T6_A4_open <- read_csv(here("data", "A4_open_annotations", "annotations_T6.csv")) %>% clean_names
+
+T9_A4_open <- read_csv(here("data", "A4_open_annotations", "annotations_T9.csv")) %>% clean_names
+
+T12_A4_open <- read_csv(here("data", "A4_open_annotations", "annotations_T12.csv")) %>% clean_names
+```
+
+```{r}
+#combining for all timepoints
+A4_open_T0_3 <- rbind(T0_A4_open, T3_A4_open)
+A4_open_T6_9 <- rbind(T6_A4_open, T9_A4_open)
+A4_open_T0_9 <- rbind(A4_open_T0_3, A4_open_T6_9)
+A4_open_annual <- rbind(A4_open_T0_9, T12_A4_open)
+```
+
+```{r}
+# add an additional column to indicate nutrient levels
+
+A4_open_annual_mutate <- A4_open_annual %>%
+  add_column(nutrients = "ambient")
+
+# add additional column to indicate lobophora presence 
+# originally separated into lobo_enc, lobo_fol, other, and out or cage. However, Tom said that it's better to combine lobo encrusting with other "available settlement" substrates as it's hard to be confident with lobophora enrusting ID in the photomosaics 
+
+A4_open_annual_mutate <- A4_open_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                   label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+A4_open_annual_mutate <- transform(A4_open_annual_mutate,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+                      
+```
+
+```{r}
+A4_open_annual_mutate_coral <- A4_open_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                    label == "Lobo_fol" ~ "Foliose Lobophora",
+                                    label == "Cau_pelt" ~ "Macroalgae",
+                                    label == "Cau_race" ~ "Macroalgae",
+                                    label == "Cau_ser" ~ "Macroalgae",
+                                    label == "Dic_sp" ~ "Macroalgae",
+                                    label == "Hal_disc" ~ "Macroalgae",
+                                    label == "Hal_mac" ~ "Macroalgae",
+                                    label == "Hal_min" ~ "Macroalgae",
+                                    label == "Hal_sp" ~ "Macroalgae",
+                                    label == "Pad_bor" ~ "Macroalgae",
+                                    label == "Sar_pac" ~ "Macroalgae",
+                                   label == "Monti" ~ "Montipora",
+                                   label == "Poc" ~ "Corals (Pocillopora and Acropora)",
+                                   label == "Acr_bra" ~ "Corals (Pocillopora and Acropora)",
+                                   label == "Acr_dig" ~ "Corals (Pocillopora and Acropora)",
+                                   label == "Acr_enc" ~ "Corals (Pocillopora and Acropora)",
+                                   label == "Acr_tab" ~ "Corals (Pocillopora and Acropora)",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+A4_open_annual_mutate_coral <- transform(A4_open_annual_mutate_coral,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+```
+
+
+
+```{r}
+
+
+summary_A4_open <- A4_open_annual_mutate %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence) %>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+    complete(timepoint, nutrients, plot, herbivory, lobo_presence,
+             fill = list(n = 0, percent_cover = 0))
+
+summary_A4_open 
+
+
+# summary_A4_2x2 <- A4_2x2_annual_mutate %>%
+ # group_by(timepoint, nutrients, plot, herbivory, lobo_presence) %>%
+ # tally()
+  
+ # count(lobo_presence)
+#  rename(summary_A4_2x2, lobo_count = n) %>%
+ # mutate(percent_cover = ((lobo_count/225)*100)) %>%
+#  ungroup() %>%
+ # complete(timepoint, nutrients, plot, herbivory, fill = list(count =0)) %>%
+ #  distinct()
+  
+
+
+```
+
+### B2 Open
+
+```{r}
+T0_B2_open <- read_csv(here("data", "B2_open_annotations", "annotations_T0.csv")) %>% clean_names
+
+T3_B2_open <- read_csv(here("data", "B2_open_annotations", "annotations_T3.csv")) %>% clean_names
+
+T6_B2_open <- read_csv(here("data", "B2_open_annotations", "annotations_T6.csv")) %>% clean_names
+
+T9_B2_open <- read_csv(here("data", "B2_open_annotations", "annotations_T9.csv")) %>% clean_names
+
+T12_B2_open <- read_csv(here("data", "B2_open_annotations", "annotations_T12.csv")) %>% clean_names
+```
+
+```{r}
+#combining for all timepoints
+B2_open_T0_3 <- rbind(T0_B2_open, T3_B2_open)
+B2_open_T6_9 <- rbind(T6_B2_open, T9_B2_open)
+B2_open_T0_9 <- rbind(B2_open_T0_3, B2_open_T6_9)
+B2_open_annual <- rbind(B2_open_T0_9, T12_B2_open)
+```
+
+```{r}
+# add an additional column to indicate nutrient levels
+
+B2_open_annual_mutate <- B2_open_annual %>%
+  add_column(nutrients = "ambient")
+
+# add additional column to indicate lobophora presence 
+# originally separated into lobo_enc, lobo_fol, other, and out or cage. However, Tom said that it's better to combine lobo encrusting with other "available settlement" substrates as it's hard to be confident with lobophora enrusting ID in the photomosaics 
+
+B2_open_annual_mutate <- B2_open_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                   label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+B2_open_annual_mutate <- transform(B2_open_annual_mutate,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+                      
+```
+
+```{r}
+
+summary_B2_open <- B2_open_annual_mutate %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence) %>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+    complete(timepoint, nutrients, plot, herbivory, lobo_presence,
+             fill = list(n = 0, percent_cover = 0))
+
+summary_B2_open 
+```
+
+### C2 open
+
+```{r}
+T0_C2_open <- read_csv(here("data", "C2_open_annotations", "annotations_T0.csv")) %>% clean_names
+
+T3_C2_open <- read_csv(here("data", "C2_open_annotations", "annotations_T3.csv")) %>% clean_names
+
+T6_C2_open <- read_csv(here("data", "C2_open_annotations", "annotations_T6.csv")) %>% clean_names
+
+T9_C2_open <- read_csv(here("data", "C2_open_annotations", "annotations_T9.csv")) %>% clean_names
+
+T12_C2_open <- read_csv(here("data", "C2_open_annotations", "annotations_T12.csv")) %>% clean_names
+```
+
+
+```{r}
+#combining for all timepoints
+C2_open_T0_3 <- rbind(T0_C2_open, T3_C2_open)
+C2_open_T6_9 <- rbind(T6_C2_open, T9_C2_open)
+C2_open_T0_9 <- rbind(C2_open_T0_3, C2_open_T6_9)
+C2_open_annual <- rbind(C2_open_T0_9, T12_C2_open)
+```
+
+```{r}
+# add an additional column to indicate nutrient levels
+
+C2_open_annual_mutate <- C2_open_annual %>%
+  add_column(nutrients = "ambient")
+
+# add additional column to indicate lobophora presence 
+# originally separated into lobo_enc, lobo_fol, other, and out or cage. However, Tom said that it's better to combine lobo encrusting with other "available settlement" substrates as it's hard to be confident with lobophora enrusting ID in the photomosaics 
+
+C2_open_annual_mutate <- C2_open_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                   label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+C2_open_annual_mutate <- transform(C2_open_annual_mutate,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+                      
+```
+
+```{r}
+
+
+summary_C2_open <- C2_open_annual_mutate %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence) %>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+    complete(timepoint, nutrients, plot, herbivory, lobo_presence,
+             fill = list(n = 0, percent_cover = 0))
+
+summary_C2_open 
+```
+
+
+### D1 open
+
+
+```{r}
+T0_D1_open <- read_csv(here("data", "D1_open_annotations", "annotations_T0.csv")) %>% clean_names
+
+T3_D1_open <- read_csv(here("data", "D1_open_annotations", "annotations_T3.csv")) %>% clean_names
+
+T6_D1_open <- read_csv(here("data", "D1_open_annotations", "annotations_T6.csv")) %>% clean_names
+
+T9_D1_open <- read_csv(here("data", "D1_open_annotations", "annotations_T9.csv")) %>% clean_names
+
+T12_D1_open <- read_csv(here("data", "D1_open_annotations", "annotations_T12.csv")) %>% clean_names
+```
+
+
+```{r}
+#combining for all timepoints
+D1_open_T0_3 <- rbind(T0_D1_open, T3_D1_open)
+D1_open_T6_9 <- rbind(T6_D1_open, T9_D1_open)
+D1_open_T0_9 <- rbind(D1_open_T0_3, D1_open_T6_9)
+D1_open_annual <- rbind(D1_open_T0_9, T12_D1_open)
+```
+
+```{r}
+# add an additional column to indicate nutrient levels
+
+D1_open_annual_mutate <- D1_open_annual %>%
+  add_column(nutrients = "ambient")
+
+# add additional column to indicate lobophora presence 
+# originally separated into lobo_enc, lobo_fol, other, and out or cage. However, Tom said that it's better to combine lobo encrusting with other "available settlement" substrates as it's hard to be confident with lobophora enrusting ID in the photomosaics 
+
+D1_open_annual_mutate <- D1_open_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                   label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+D1_open_annual_mutate <- transform(D1_open_annual_mutate,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+                      
+```
+
+```{r}
+
+summary_D1_open <- D1_open_annual_mutate %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence) %>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+    complete(timepoint, nutrients, plot, herbivory, lobo_presence,
+             fill = list(n = 0, percent_cover = 0))
+
+summary_D1_open 
+```
+
+
+### A3 Open
+
+```{r}
+T0_A3_open <- read_csv(here("data", "A3_open_annotations", "annotations_T0.csv")) %>% clean_names
+
+T3_A3_open <- read_csv(here("data", "A3_open_annotations", "annotations_T3.csv")) %>% clean_names
+
+T6_A3_open <- read_csv(here("data", "A3_open_annotations", "annotations_T6.csv")) %>% clean_names
+
+T9_A3_open <- read_csv(here("data", "A3_open_annotations", "annotations_T9.csv")) %>% clean_names
+
+T12_A3_open <- read_csv(here("data", "A3_open_annotations", "annotations_T12.csv")) %>% clean_names
+```
+
+```{r}
+#combining for all timepoints
+A3_open_T0_3 <- rbind(T0_A3_open, T3_A3_open)
+A3_open_T6_9 <- rbind(T6_A3_open, T9_A3_open)
+A3_open_T0_9 <- rbind(A3_open_T0_3, A3_open_T6_9)
+A3_open_annual <- rbind(A3_open_T0_9, T12_A3_open)
+```
+
+```{r}
+# add an additional column to indicate nutrient levels
+
+A3_open_annual_mutate <- A3_open_annual %>%
+  add_column(nutrients = "enriched")
+
+# add additional column to indicate lobophora presence 
+# originally separated into lobo_enc, lobo_fol, other, and out or cage. However, Tom said that it's better to combine lobo encrusting with other "available settlement" substrates as it's hard to be confident with lobophora enrusting ID in the photomosaics 
+
+A3_open_annual_mutate <- A3_open_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                   label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+A3_open_annual_mutate <- transform(A3_open_annual_mutate,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+                      
+```
+
+```{r}
+
+summary_A3_open <- A3_open_annual_mutate %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence) %>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+    complete(timepoint, nutrients, plot, herbivory, lobo_presence,
+             fill = list(n = 0, percent_cover = 0))
+
+summary_A3_open 
+```
+
+
+### B1 Open
+
+```{r}
+T0_B1_open <- read_csv(here("data", "B1_open_annotations", "annotations_T0.csv")) %>% clean_names
+
+T3_B1_open <- read_csv(here("data", "B1_open_annotations", "annotations_T3.csv")) %>% clean_names
+
+T6_B1_open <- read_csv(here("data", "B1_open_annotations", "annotations_T6.csv")) %>% clean_names
+
+T9_B1_open <- read_csv(here("data", "B1_open_annotations", "annotations_T9.csv")) %>% clean_names
+
+T12_B1_open <- read_csv(here("data", "B1_open_annotations", "annotations_T12.csv")) %>% clean_names
+```
+
+```{r}
+#combining for all timepoints
+B1_open_T0_3 <- rbind(T0_B1_open, T3_B1_open)
+B1_open_T6_9 <- rbind(T6_B1_open, T9_B1_open)
+B1_open_T0_9 <- rbind(B1_open_T0_3, B1_open_T6_9)
+B1_open_annual <- rbind(B1_open_T0_9, T12_B1_open)
+```
+
+```{r}
+# add an additional column to indicate nutrient levels
+
+B1_open_annual_mutate <- B1_open_annual %>%
+  add_column(nutrients = "enriched")
+
+# add additional column to indicate lobophora presence 
+# originally separated into lobo_enc, lobo_fol, other, and out or cage. However, Tom said that it's better to combine lobo encrusting with other "available settlement" substrates as it's hard to be confident with lobophora enrusting ID in the photomosaics 
+
+B1_open_annual_mutate <- B1_open_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                   label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+B1_open_annual_mutate <- transform(B1_open_annual_mutate,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+                      
+```
+
+```{r}
+
+summary_B1_open <- B1_open_annual_mutate %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence) %>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+    complete(timepoint, nutrients, plot, herbivory, lobo_presence,
+             fill = list(n = 0, percent_cover = 0))
+
+summary_B1_open 
+```
+
+
+### C4 Open
+
+```{r}
+T0_C4_open <- read_csv(here("data", "C4_open_annotations", "annotations_T0.csv")) %>% clean_names
+
+T3_C4_open <- read_csv(here("data", "C4_open_annotations", "annotations_T3.csv")) %>% clean_names
+
+T6_C4_open <- read_csv(here("data", "C4_open_annotations", "annotations_T6.csv")) %>% clean_names
+
+T9_C4_open <- read_csv(here("data", "C4_open_annotations", "annotations_T9.csv")) %>% clean_names
+
+T12_C4_open <- read_csv(here("data", "C4_open_annotations", "annotations_T12.csv")) %>% clean_names
+```
+
+```{r}
+#combining for all timepoints
+C4_open_T0_3 <- rbind(T0_C4_open, T3_C4_open)
+C4_open_T6_9 <- rbind(T6_C4_open, T9_C4_open)
+C4_open_T0_9 <- rbind(C4_open_T0_3, C4_open_T6_9)
+C4_open_annual <- rbind(C4_open_T0_9, T12_C4_open)
+```
+
+```{r}
+# add an additional column to indicate nutrient levels
+
+C4_open_annual_mutate <- C4_open_annual %>%
+  add_column(nutrients = "enriched")
+
+# add additional column to indicate lobophora presence 
+# originally separated into lobo_enc, lobo_fol, other, and out or cage. However, Tom said that it's better to combine lobo encrusting with other "available settlement" substrates as it's hard to be confident with lobophora enrusting ID in the photomosaics 
+
+C4_open_annual_mutate <- C4_open_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                   label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+C4_open_annual_mutate <- transform(C4_open_annual_mutate,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+                      
+```
+
+```{r}
+
+summary_C4_open <- C4_open_annual_mutate %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence) %>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+    complete(timepoint, nutrients, plot, herbivory, lobo_presence,
+             fill = list(n = 0, percent_cover = 0))
+
+summary_C4_open 
+```
+
+
+### D3 Open
+
+
+```{r}
+T0_D3_open <- read_csv(here("data", "D3_open_annotations", "annotations_T0.csv")) %>% clean_names
+
+T3_D3_open <- read_csv(here("data", "D3_open_annotations", "annotations_T3.csv")) %>% clean_names
+
+T6_D3_open <- read_csv(here("data", "D3_open_annotations", "annotations_T6.csv")) %>% clean_names
+
+T9_D3_open <- read_csv(here("data", "D3_open_annotations", "annotations_T9.csv")) %>% clean_names
+
+# does not exist yet T12_D3_open <- read_csv(here("data", "D3_open_annotations", "annotations_T12.csv")) %>% clean_names
+```
+
+```{r}
+#combining for all timepoints
+D3_open_T0_3 <- rbind(T0_D3_open, T3_D3_open)
+D3_open_T6_9 <- rbind(T6_D3_open, T9_D3_open)
+D3_open_T0_9 <- rbind(D3_open_T0_3, D3_open_T6_9)
+D3_open_annual <- D3_open_T0_9
+  
+# will need to use D3_open_annual <- rbind(D3_open_T0_9, T12_D3_open) once D3 T12 is done. 
+```
+
+```{r}
+# add an additional column to indicate nutrient levels
+
+D3_open_annual_mutate <- D3_open_annual %>%
+  add_column(nutrients = "enriched")
+
+# add additional column to indicate lobophora presence 
+# originally separated into lobo_enc, lobo_fol, other, and out or cage. However, Tom said that it's better to combine lobo encrusting with other "available settlement" substrates as it's hard to be confident with lobophora enrusting ID in the photomosaics 
+
+D3_open_annual_mutate <- D3_open_annual_mutate %>% 
+   mutate(lobo_presence = case_when(label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                   label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "OUT" ~ "Out or Cage",
+                                   label == "Cage" ~ "Out or Cage",
+                                   TRUE ~ "Other"))
+
+#need to make rows, columns, and lobophora presence as a factor so they can be plotted
+
+D3_open_annual_mutate <- transform(D3_open_annual_mutate,
+                       lobo_presence = as.factor(lobo_presence),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint)) %>%
+                       mutate(timepoint = factor(timepoint, levels = c("T0", "T3", "T6", "T9", "T12")))
+                      
+```
+
+```{r}
+
+summary_D3_open <- D3_open_annual_mutate %>%
+  subset(timepoint %in% c('T0', 'T3', 'T6', 'T9')) %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence) %>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+    complete(timepoint, nutrients, plot, herbivory, lobo_presence,
+             fill = list(n = 0, percent_cover = 0))
+
+summary_D3_open_T0_T9 <- summary_D3_open %>% #will need to get rid of this later
+  subset(timepoint %in% c('T0', 'T3', 'T6', 'T9'))
+
+summary_D3_open_T0_T9
+```
+
+
+#Open plots (enriched and ambient plots)
+
+```{r}
+#combine the summary table from each plot 
+
+summary_open_A4_B2 <- rbind(summary_A4_open, summary_B2_open) #combine A4 and B2
+
+summary_open_C2_D1 <- rbind(summary_C2_open, summary_D1_open) #combine C2 and D1
+
+summary_open_ambient <- rbind(summary_open_A4_B2, summary_open_C2_D1) #combine ambient
+
+summary_open_A3_B1 <- rbind(summary_A4_open, summary_B1_open) #combine A3 and B1
+
+summary_open_C4_D3 <- rbind(summary_C4_open, summary_D3_open_T0_T9) #combine C2 and D3 # will need to update with D3 T12 later
+
+summary_open_enriched <- rbind(summary_open_A3_B1, summary_open_C4_D3) #combine enriched
+
+summary_open <- rbind(summary_open_ambient, summary_open_enriched) #combine ambient and enriched
+```
+
+##Open plots (enriched and ambient plots)
+
+```{r}
+plots_all <- bind_rows(A4_open_annual_mutate, B2_open_annual_mutate, C2_open_annual_mutate, D1_open_annual_mutate, A3_open_annual_mutate, B1_open_annual_mutate, C4_open_annual_mutate, D3_open_annual_mutate, A4_2x2_annual_mutate, B2_2x2_annual_mutate, C2_2x2_annual_mutate, D1_2x2_annual_mutate, A3_2x2_annual_mutate, B1_2x2_annual_mutate, C4_2x2_annual_mutate, D3_2x2_annual_mutate)
+```
+
+```{r}
+plots_all <- plots_all %>% 
+   mutate(functional_group = case_when(label == "Cau_pelt" ~ "Caulerpa spp.", 
+                                    label == "Cau_race" ~ "Caulerpa spp.",
+                                    label == "Cau_ser" ~ "Caulerpa spp.",
+                                    label == "Dic_sp" ~ "Dictyota spp.",
+                                    label == "Hal_dead" ~ "Halimeda spp",
+                                    label == "Hal_disc" ~ "Halimeda spp",
+                                    label == "Hal_mac" ~ "Halimeda spp",
+                                    label == "Hal_min" ~ "Halimeda spp",
+                                    label == "Hal_sp" ~ "Halimeda spp",
+                                    label == "Lobo_fol" ~ "Foliose Lobophora",
+                                   label == "Pad_bor" ~ "Padina",
+                                   label == "Tur_orn" ~ "Turbinaria",
+                                   label == "Lobo_enc" ~ "Available Substrate", 
+                                    label == "B_CCA" ~ "Available Substrate",
+                                    label == "Bare-Subst" ~ "Available Substrate",
+                                    label == "D_Acr" ~ "Available Substrate",
+                                    label == "D_Acr_sed" ~ "Available Substrate",
+                                    label == "D_Poc" ~ "Available Substrate",
+                                    label == "D_Poc_sed" ~ "Available Substrate",
+                                    label == "Sed_turf" ~ "Available Substrate",
+                                    label == "Sturf" ~ "Available Substrate",
+                                    label == "Peyss_sp" ~ "Available Substrate",
+                                  label == "OUT" ~ "Out or Cage",
+                                  label == "Cage" ~ "Out or Cage",
+                                  label == "Monti" ~ "Montipora",
+                                   label == "Poc" ~ "Corals (Pocillopora and Acropora)",
+                                   label == "Acr_bra" ~ "Corals (Pocillopora and Acropora)",
+                                   label == "Acr_dig" ~ "Corals (Pocillopora and Acropora)",
+                                   label == "Acr_enc" ~ "Corals (Pocillopora and Acropora)",
+                                   label == "Acr_tab" ~ "Corals (Pocillopora and Acropora)",
+                                   TRUE ~ "Other"))
+```
+
+```{r}
+library(gstat)
+library(sp)
+```
+
+```{r}
+plots_variogram <- plots_all %>%
+  mutate(x = as.numeric(column),
+         y = as.numeric (row))
+
+
+coordinates(plots_variogram)= ~ x+y
+
+
+TheVariogram <- variogram(functional_group~1, data=plots_variogram)
+plot(TheVariogram)
+
+
+# create a bubble plot with the random values
+bubble(TheData, zcol='func', fill=TRUE, do.sqrt=FALSE, maxsize=3)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+#make a summary table
+
+summary_open_macro1 <- plots_all %>%
+  group_by(timepoint, plot, herbivory, functional_group) %>%
+  count(functional_group) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+  complete(timepoint, plot, herbivory, functional_group,
+           fill = list(n = 0, percent_cover = 0)) %>%
+  mutate(nutrient_level = case_when(plot == "A3" ~ "enriched",
+                                    plot == "B1" ~ "enriched",
+                                    plot == "C4" ~ "enriched",
+                                    plot == "D3" ~ "enriched",
+                                    plot == "A4" ~ "ambient",
+                                    plot == "B2" ~ "ambient",
+                                    plot == "C2" ~ "ambient",
+                                    plot == "D1" ~ "ambient"))
+                                    
+view(summary_open_macro1)
+
+summary_macro_open <- summary_open_macro1 %>%
+  ungroup() %>%
+  filter(functional_group %in% c("Dictyota spp.", "Halimeda spp", "Turbinaria", "Caulerpa spp.", "Foliose Lobophora", "Corals (Pocillopora and Acropora)", "Montipora")) %>%
+  group_by(timepoint, functional_group, nutrient_level, herbivory) %>%
+  summarize(percent_avg = mean(percent_cover),
+            percent_sd = sd(percent_cover),
+            percent_se = percent_sd/sqrt(4))
+
+
+view(summary_macro_open)
+
+#ggplot(df, aes(x=week, y=sales, color=store, shape=promo,
+      #         group=interaction(store, promo))) + 
+ # geom_point(size=3) +
+ # geom_line()
+
+
+summary_open_macroplot <- ggplot(summary_macro_open, aes(x = timepoint, y = percent_avg, color = functional_group, shape = nutrient_level, group = interaction(functional_group, nutrient_level))) +
+  geom_point(size = 3, position=position_dodge(width=0)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = percent_avg - percent_se, 
+                    ymax = percent_avg + percent_se),
+                    position = position_dodge(width=0),
+                    width = 0.5) +
+  ylim(0,45) +
+  labs(title = "Average Percent Cover in Open plots (n = 4)") +
+  theme(plot.title = element_text(size=8)) +
+  facet_wrap(~ herbivory + nutrient_level)
+
+summary_open_macroplot
+
+summary_open_macroplot <- ggplot(summary_macro_open, aes(x = timepoint, y = percent_avg, color = functional_group, shape = nutrient_level, group = interaction(functional_group, nutrient_level))) +
+  geom_point(size = 3, position=position_dodge(width=0)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = percent_avg - percent_se, 
+                    ymax = percent_avg + percent_se),
+                    position = position_dodge(width=0),
+                    width = 0.5) +
+  ylim(0,45) +
+  labs(title = "Average Percent Cover in Open plots (n = 4)") +
+  theme(plot.title = element_text(size=8)) +
+  facet_wrap(~ herbivory + functional_group)
+
+```
+
+
+```{r}
++
+  scale_color_manual(values=c(viridis())) 
+
+summary_open_macroplot
+
+summary_open_macroplot1 <- ggplot(summary_macro_open, aes(x = timepoint, y = percent_avg, color = functional_group, shape = nutrient_level)) +
+  geom_line(aes(group = functional_group, nutrient_level)) +
+  geom_errorbar(aes(ymin = percent_avg - percent_se, 
+                    ymax = percent_avg + percent_se),
+                    position = position_dodge(width=0.5),
+                    width = 0.15) +
+  ylim(0,50) +
+  labs(title = "Average Percent Cover in Open plots (n = 4)") +
+  theme(plot.title = element_text(size=8)) 
+
+summary_open_macroplot1
+
+
+summary_open_boxplot <- ggplot(summary_macro_open, aes(x = timepoint, y = percent_avg, color = functional_group, shape = nutrient_level, group = interaction(functional_group, nutrient_level))) +
+  geom_boxplot(size = 3, position=position_dodge(width=0)) +
+  geom_errorbar(aes(ymin = percent_avg - percent_se, 
+                    ymax = percent_avg + percent_se),
+                    position = position_dodge(width=0),
+                    width = 0.5) +
+  ylim(0,45) +
+  labs(title = "Average Percent Cover in Open plots (n = 4)") +
+  theme(plot.title = element_text(size=8)) 
+
+summary_open_boxplot
+
+
+summary_open_macro <- plots_all %>%
+  group_by(timepoint, nutrients, plot, herbivory, functional_group) %>%
+  count(functional_group) %>%
+  ungroup() %>%
+  complete(timepoint, nutrients, plot, herbivory, functional_group,
+           fill = list(n = 0, percent_cover = 0))
+
+view(summary_open_macro)
+
+summary_C4_open <- C4_open_annual_mutate %>%
+  group_by(timepoint, nutrients, plot, herbivory, lobo_presence) %>%
+  count(lobo_presence) %>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+    complete(timepoint, nutrients, plot, herbivory, functional_group,
+             fill = list(n = 0, percent_cover = 0))
+
+summary_enriched_macro <- plots_all %>%
+  group_by(timepoint, functional_group, herbivory, plot) %>%
+  subset(nutrients == "enriched") %>%
+  count(functional_group) %>%
+  ungroup() %>%
+  complete(plot, nesting(timepoint, functional_group, herbivory), fill = list(n = 0))
+
+  
+  
+  
+  
+%>%
+  count(functional_group)
+  
+  summarise(n = count(functional_group), .drop=FALSE)
+
+  
+
+view(summary_open_macro)
+
+%>%
+  mutate(percent_cover = ((n/225)*100)) %>%
+  ungroup() %>%
+  complete(timepoint, nutrients, plot, herbivory, functional_group,
+             fill = list(n = 0))
+
+
+
+
+summary_open_macro <- plots_all %>%
+  group_by(timepoint, functional_group, nutrients, herbivory, plot) %>%
+  count(functional_group)
+%>%
+  ungroup() %>%
+  complete(timepoint, nutrients, plot, herbivory, functional_group,
+             fill = list(n = 0))
+
+
+  
+  
+  ungroup() %>%
+  complete(plot,
+    nesting(timepoint, functional_group, nutrients, herbivory),
+    fill = list(n = 0, percent_cover = 0)) 
+
+
+complete(timepoint, functional_group, nutrients, herbivory, plot),
+             fill = list(n = 0, percent_cover = 0))
+
+  subset(functional_group %in% c('Available Substrate','Foliose Lobophora')) %>%
+  %>%
+  summarize(percent_avg = mean(percent_cover),
+            percent_sd = sd(percent_cover),
+            percent_se = percent_sd/sqrt(4))
+```
+
+
+
+```{r}
+# make a summary table 
+
+summary_open_lobophora <- summary_open %>%
+  subset(lobo_presence %in% c('Available Substrate','Foliose Lobophora')) %>%
+  group_by(timepoint, lobo_presence, nutrients, herbivory) %>%
+  summarize(percent_avg = mean(percent_cover),
+            percent_sd = sd(percent_cover),
+            percent_se = percent_sd/sqrt(4))
+
+view(summary_open)
+
+
+summary_open_lobophora_plot <- ggplot(summary_open_lobophora, aes(x = timepoint, y = percent_avg, color = lobo_presence, shape = nutrients)) +
+  geom_point(size = 3, position=position_dodge(width=0.5)) +
+  geom_errorbar(aes(ymin = percent_avg - percent_se, 
+                    ymax = percent_avg + percent_se),
+                    position = position_dodge(width=0.5),
+                    width = 0.15) +
+  ylim(0,80) +
+  labs(title = "Average Percent Cover of Lobophora in Open plots (n = 4)") +
+  theme(plot.title = element_text(size=8)) +
+  scale_color_manual(values=c("dark grey", "dark green")) 
+
+summary_open_lobophora_plot
+           
+```
+
+```{r}
+ggarrange(summary_2x2_lobophora_plot, summary_open_lobophora_plot, common.legend = TRUE)
+```
+# looking at % cover
+
+```{r}
+summary_open_macroalgae <- summary_open %>%
+  subset(lobo_presence %in% c('Available Substrate','Foliose Lobophora')) %>%
+  group_by(timepoint, lobo_presence, nutrients, herbivory) %>%
+  summarize(percent_avg = mean(percent_cover),
+            percent_sd = sd(percent_cover),
+            percent_se = percent_sd/sqrt(4))
+```
+
+
+
+### Plots! (Heatmaps)
+
+#this is for plots (beneath this)
+
+### A4 2x2
+
+```{r}
+library(RColorBrewer)
+library(viridis)
+```
+
+
+```{r}
+# divide out by timepoint
+
+T0_mutate_A4_2x2 <- A4_2x2_annual_mutate_coral %>%
+  subset(timepoint == 'T0')
+
+T3_mutate_A4_2x2 <- A4_2x2_annual_mutate_coral %>%
+  subset(timepoint == 'T3')
+
+T6_mutate_A4_2x2 <- A4_2x2_annual_mutate_coral %>%
+  subset(timepoint == 'T6')
+
+T9_mutate_A4_2x2 <- A4_2x2_annual_mutate_coral %>%
+  subset(timepoint == 'T9')
+
+T12_mutate_A4_2x2 <- A4_2x2_annual_mutate_coral %>%
+  subset(timepoint == 'T12')
+```
+
+```{r}
+#reverse row and column factors as needed. This will be different for each, as we need to align each timepoint so they all have the same orientation. Even if the orientation is the same for each plot on Coral Net, Coral Net has the (0,0) on the top left corner, where R automatically puts (0,0) in the bottom left corner. This must be accounted for. 
+
+# originally used %>% mutate(column = fct_rev(column)); however, there was an issue because if you rerun the code, it switches back to initial order. Chose to hard code instead to avoid this. Might be able to revisit and add fct_rev in figure code instead to avoid this issue. 
+
+T0_mutate_A4_2x2 <- T0_mutate_A4_2x2 %>%
+  mutate(row = factor(row, levels =c("5490", "5111", "4732", "4354", "3975", "3596", "3218", "2839", "2460", "2082", "1703", "1324", "946", "567", "188"))) %>%
+  mutate((column = factor(column, levels =c("6263", "5831", "5399", "4967", "4535", "4103", "3671", "3239", "2807", "2375", "1943", "1511", "1079", "647", "215"))))
+
+T3_mutate_A4_2x2 <- T3_mutate_A4_2x2 %>%
+  mutate(row = factor(row, levels =c("6766", "6299", "5832", "5366", "4899", "4432", "3966", "3499", "3032", "2566", "2099", "1632", "1166", "699", "232")))
+
+T6_mutate_A4_2x2 <- T6_mutate_A4_2x2 %>%
+  mutate(row = factor(row, levels =c("6766", "6299", "5832", "5366", "4899", "4432", "3966", "3499", "3032", "2566", "2099", "1632", "1166", "699", "232")))
+
+T9_mutate_A4_2x2 <- T9_mutate_A4_2x2 %>%
+  mutate(row = factor(row, levels =c("7608", "7083", "6558", "6033", "5509", "4984", "4459", "3934", "3410", "2885", "2360", "1835", "1311", "786", "261")))
+
+#T12, don't need to adjust factor levels for row or column 
+
+```
+
+```{r}
+T0_mutate_A4_2x2 <- T0_mutate_A4_2x2 %>%
+  mutate(row = factor(row, levels =c("5490", "5111", "4732", "4354", "3975", "3596", "3218", "2839", "2460", "2082", "1703", "1324", "946", "567", "188"))) %>%
+  mutate((column = factor(column, levels =c("6263", "5831", "5399", "4967", "4535", "4103", "3671", "3239", "2807", "2375", "1943", "1511", "1079", "647", "215"))))
+
+T0_A4_2x2_plot <- ggplot(T0_mutate_A4_2x2, aes(x = row, y = column, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("#FFF5EB", "#80B1D3", "#D3D3D3", "#5A5A5A")) +
+  labs(x = "", y = "", title = " A4 2x2 T0") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(215,6263)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(188,5490)) +
+  theme(plot.title = element_text(size=10))
+
+
+T3_A4_2x2_plot <- ggplot(T3_mutate_A4_2x2, aes(x = column, y = row, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("#FFF5EB", "#FB8072","#33A02C","#B2DF8A","#80B1D3", "#D3D3D3", "#5A5A5A")) +
+  labs(x = "", y = "", title = "A4 2x2 T3") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(232,6766)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(211,6136)) +
+  theme(plot.title = element_text(size=10))
+
+T6_mutate_A4_2x2 <- T6_mutate_A4_2x2 %>%
+  mutate(row = factor(row, levels =c("6766", "6299", "5832", "5366", "4899", "4432", "3966", "3499", "3032", "2566", "2099", "1632", "1166", "699", "232")))
+
+T6_A4_2x2_plot <- ggplot(T6_mutate_A4_2x2, aes(x = column, y = row, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("#FFF5EB", "#FB8072","#33A02C","#B2DF8A","#80B1D3", "#D3D3D3", "#5A5A5A")) +
+  labs(x = "", y = "", title = "A4 2x2 T6") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(232,6766)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(221, 6438)) +
+  theme(plot.title = element_text(size=10))
+
+T9_mutate_A4_2x2 <- T9_mutate_A4_2x2 %>%
+  mutate(row = factor(row, levels =c("7608", "7083", "6558", "6033", "5509", "4984", "4459", "3934", "3410", "2885", "2360", "1835", "1311", "786", "261")))
+
+
+T9_A4_2x2_plot <- ggplot(T9_mutate_A4_2x2, aes(x = column, y = row, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("#FFF5EB", "#FB8072","#33A02C","#B2DF8A","#80B1D3", "#D3D3D3", "#5A5A5A")) +
+  labs(x = "", y = "", title = "A4 2x2 T9") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(261,7608)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(239, 6953)) +
+  theme(plot.title = element_text(size=10))
+
+T12_A4_2x2_plot <- ggplot(T12_mutate_A4_2x2, aes(x = row, y = column, fill = lobo_presence, z = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("#FFF5EB", "#FB8072","#33A02C","#B2DF8A","#80B1D3", "#D3D3D3", "#5A5A5A")) +
+  labs(x = "", y = "", title = "A4 2x2 T12") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(232, 6766)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(215,6264)) +
+  theme(plot.title = element_text(size=10))
+
+T12_A4_2x2_plot + stat_summary_2d(bins = 5, fun = "sum")
+
+
+T0_A4_2x2_plot
+
+T3_A4_2x2_plot
+
+T6_A4_2x2_plot
+
+T9_A4_2x2_plot
+
+T12_A4_2x2_plot
+
+#testing
+
+T12_mutate_A4_2x2_test <-  T12_mutate_A4_2x2 %>%
+   mutate(lobo_num = case_when(lobo_presence == "Available Substrate" ~ "1", 
+                                    lobo_presence == "Out or Cage" ~ "2",
+                                    lobo_presence == "Macroalgae" ~ "3",
+                                    lobo_presence == "Foliose Lobophora" ~ "4",
+                                    lobo_presence == "Corals (Pocillopora and Acropora)" ~ "5",
+                                    lobo_presence == "Montipora" ~ "6",
+                                    lobo_presence == "Other" ~ "7")) %>%
+  mutate(lobo_num = as.numeric(lobo_num))
+
+T12_A4_2x2_plot2 <- ggplot(T12_mutate_A4_2x2_test, aes(x = row, y = column, fill = lobo_presence, z = lobo_num)) +
+  geom_raster() +
+  coord_equal() +
+  scale_fill_manual(values = c("#FFF5EB", "#FB8072","#33A02C","#B2DF8A","#80B1D3", "#D3D3D3", "#5A5A5A")) +
+  labs(x = "", y = "", title = "A4 2x2 T12") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(232, 6766)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(215,6264)) +
+  theme(plot.title = element_text(size=10))
+
+T12_A4_2x2_plot2
+
+T12_A4_2x2_plot2 + stat_summary_2d(binwidth = 5, fun = mode(T12_mutate_A4_2x2_test$lobo_num))
+  
+  geom_bin2d(bins = 5)
+  
+  
+library(raster)
+library(terra)
+  
+T12_mutate_A4_2x2 <- A4_2x2_annual_mutate_coral %>%
+  subset(timepoint == 'T12')
+
+str(T12_mutate_A4_2x2_test)
+  
+T12_mutate_A4_2x2_test < T12_mutate_A4_2x2_test %>%
+  mutate(row = as.numeric(row))
+
+%>%
+         
+   rename(x = row,
+          y = column)
+  
+xrast <- rast(n_col = 15, )
+
+c(0,0),
+                   breaks = c(232, 6766)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(215,6264))
+  
+  
+ncol=36, nrow=18, xmin=-1000, xmax=1000, ymin=-100, ymax=900) 
+
+d <- as.data.frame(T12_mutate_A4_2x2_test, xy=TRUE)
+d <- d %>%
+  select(row, column, lobo_presence)
+rast(d, type="xyz")
+
+#Convert first two columns as lon-lat and third as value                
+ plot(dfr)
+
+```
+
+```{r}
+ggarrange(T0_A4_2x2_plot, T3_A4_2x2_plot, T6_A4_2x2_plot, T9_A4_2x2_plot, T12_A4_2x2_plot, common.legend =  TRUE)
+```
+```{r}
+
+```
+
+
+### B2 2x2
+
+
+### C2 2x2
+
+```{r}
+# divide out by timepoint
+
+T0_mutate_C2_2x2 <- C2_2x2_annual_mutate %>%
+  subset(timepoint == 'T0')
+
+T3_mutate_C2_2x2 <- C2_2x2_annual_mutate %>%
+  subset(timepoint == 'T3')
+
+T6_mutate_C2_2x2 <- C2_2x2_annual_mutate %>%
+  subset(timepoint == 'T6')
+
+T9_mutate_C2_2x2 <- C2_2x2_annual_mutate %>%
+  subset(timepoint == 'T9')
+
+T12_mutate_C2_2x2 <- C2_2x2_annual_mutate %>%
+  subset(timepoint == 'T12')
+```
+
+
+
+```{r}
+#reverse row and column factors as needed. This will be different for each, as we need to align each timepoint so they all have the same orientation. Even if the orientation is the same for each plot on Coral Net, Coral Net has the (0,0) on the top left corner, where R automatically puts (0,0) in the bottom left corner. This must be accounted for. 
+
+# use %>% mutate(column = fct_rev(column)); be careful if rerunning code, you have to rerun from beginning (making rows/columns a factor), or it will un/re reverse when you rerun. 
+
+T0_mutate_C2_2x2 <- T0_mutate_C2_2x2 %>%
+  mutate(column = fct_rev(column))
+
+T3_mutate_C2_2x2 <- T3_mutate_C2_2x2 %>%
+  mutate(column = fct_rev(column)) %>%
+  mutate(row = fct_rev(row))
+
+T6_mutate_C2_2x2 <- T6_mutate_C2_2x2 %>%
+  mutate(column = fct_rev(column)) %>%
+  mutate(row = fct_rev(row))
+
+#T9 no edits needed
+
+T12_mutate_C2_2x2 <- T12_mutate_C2_2x2 %>%
+  mutate(row = fct_rev(row))
+```
+
+
+
+```{r}
+T0_C2_2x2_plot <- ggplot(T0_mutate_C2_2x2, aes(x = column, y = row, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("light green", "dark green", "light grey", "dark grey")) +
+  labs(x = "", y = "", title = "C2 2x2 T0") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(225,6557)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(231, 6732)) +
+  theme(plot.title = element_text(size=10))
+
+T3_C2_2x2_plot <- ggplot(T3_mutate_C2_2x2, aes(x = row, y = column, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("light green", "dark green", "light grey", "dark grey")) +
+  labs(x = "", y = "", title = "C2 2x2 T3") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(190,5528)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(186, 5412)) +
+  theme(plot.title = element_text(size=10))
+
+T6_C2_2x2_plot <- ggplot(T6_mutate_C2_2x2, aes(x = row, y = column, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("light green", "dark green", "light grey", "dark grey")) +
+  labs(x = "", y = "", title = "C2 2x2 T6") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(232,6766)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(224, 6536)) +
+  theme(plot.title = element_text(size=10))
+
+T9_C2_2x2_plot <- ggplot(T9_mutate_C2_2x2, aes(x = row, y = column, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("light green", "dark green", "light grey", "dark grey")) +
+  labs(x = "", y = "", title = "C2 2x2 T9") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(252,7331)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(258, 7506)) +
+  theme(plot.title = element_text(size=10))
+
+T12_C2_2x2_plot <- ggplot(T12_mutate_C2_2x2, aes(x = column, y = row, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("light green", "dark green", "light grey", "dark grey")) +
+  labs(x = "", y = "", title = "C2 2x2 T12") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(237, 6895)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(232,6766)) +
+  theme(plot.title = element_text(size=10))
+
+ggarrange(T0_C2_2x2_plot, T3_C2_2x2_plot, T6_C2_2x2_plot, T9_C2_2x2_plot, T12_C2_2x2_plot, common.legend = TRUE)
+
+```
+
+
+### D1 2x2
+
+
+### A4 Open
+
+```{r}
+# divide out by timepoint
+
+T0_mutate_A4_open <- A4_open_annual_mutate %>%
+  subset(timepoint == 'T0')
+
+T3_mutate_A4_open <- A4_open_annual_mutate %>%
+  subset(timepoint == 'T3')
+
+T6_mutate_A4_open <- A4_open_annual_mutate %>%
+  subset(timepoint == 'T6')
+
+T9_mutate_A4_open <- A4_open_annual_mutate %>%
+  subset(timepoint == 'T9')
+
+T12_mutate_A4_open <- A4_open_annual_mutate %>%
+  subset(timepoint == 'T12')
+```
+
+```{r}
+#reverse row and column factors as needed. This will be different for each, as we need to align each timepoint so they all have the same orientation. Even if the orientation is the same for each plot on Coral Net, Coral Net has the (0,0) on the top left corner, where R automatically puts (0,0) in the bottom left corner. This must be accounted for. 
+
+# use %>% mutate(column = fct_rev(column)); be careful if rerunning code, you have to rerun from beginning (making rows/columns a factor), or it will un/re reverse when you rerun. 
+
+# still need to fix T0, sent question about alignment to Kelly on 01/10/2022
+
+T3_mutate_A4_open <- T3_mutate_A4_open %>%
+  mutate(row = fct_rev(row))
+
+T6_mutate_A4_open <- T6_mutate_A4_open %>%
+  mutate(row = fct_rev(row))
+
+T9_mutate_A4_open <- T9_mutate_A4_open %>%
+  mutate(column = fct_rev(column))
+
+T12_mutate_A4_open <- T12_mutate_A4_open %>%
+  mutate(column = fct_rev(column))
+```
+
+```{r}
+T0_A4_open_plot <- ggplot(T0_mutate_A4_open, aes(x = row, y = column, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("light green", "dark green", "light grey", "dark grey")) +
+  labs(x = "", y = "", title = "A4 Open T0") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(230, 6703)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(227,6607)) +
+  theme(plot.title = element_text(size=10))
+
+T3_A4_open_plot <- ggplot(T3_mutate_A4_open, aes(x = column, y = row, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("light green", "light grey", "dark grey")) +
+  labs(x = "", y = "", title = "A4 Open T3") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(240, 6998)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(232,6655)) +
+  theme(plot.title = element_text(size=10))
+
+T6_A4_open_plot <- ggplot(T6_mutate_A4_open, aes(x = column, y = row, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("light green", "dark green", "light grey", "dark grey")) +
+  labs(x = "", y = "", title = "A4 Open T6") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(221, 6446)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(232,6766)) +
+  theme(plot.title = element_text(size=10))
+
+T9_A4_open_plot <- ggplot(T9_mutate_A4_open, aes(x = column, y = row, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("light green", "dark green", "light grey", "dark grey")) +
+  labs(x = "", y = "", title = "A4 Open T9") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(223, 6484)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(232,6766)) +
+  theme(plot.title = element_text(size=10))
+
+T12_A4_open_plot <- ggplot(T12_mutate_A4_open, aes(x = column, y = row, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("light green", "dark green", "light grey", "dark grey")) +
+  labs(x = "", y = "", title = "A4 2x2 T12") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(232, 6766)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(229,6655)) +
+  theme(plot.title = element_text(size=10))
+
+T0_A4_open_plot  #T0 is not finished yet, need to fix. Actually, should review all A4 opens to be certain
+
+T3_A4_open_plot
+
+T6_A4_open_plot
+
+T9_A4_open_plot
+
+T12_A4_open_plot
+```
+
+```{r}
+T0_A4_2x2_plot <- ggplot(T0_mutate_A4_2x2, aes(x = row, y = column, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("#b5de2b", "#26828e", "#D3D3D3", "#5A5A5A")) +
+  labs(x = "", y = "", title = " A4 2x2 T0") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(215,6263)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(188,5490)) +
+  theme(plot.title = element_text(size=10))
+
+
+T3_A4_2x2_plot <- ggplot(T3_mutate_A4_2x2, aes(x = column, y = row, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("#b5de2b", "#3e4989", "#6ece58", "#35b779", "#26828e", "#D3D3D3", "#5A5A5A")) +
+  labs(x = "", y = "", title = "A4 2x2 T3") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(232,6766)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(211,6136)) +
+  theme(plot.title = element_text(size=10))
+
+
+T6_A4_2x2_plot <- ggplot(T6_mutate_A4_2x2, aes(x = column, y = row, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("#b5de2b", "#3e4989", "#6ece58", "#35b779", "#26828e", "#D3D3D3", "#5A5A5A")) +
+  labs(x = "", y = "", title = "A4 2x2 T6") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(232,6766)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(221, 6438)) +
+  theme(plot.title = element_text(size=10))
+
+
+T9_A4_2x2_plot <- ggplot(T9_mutate_A4_2x2, aes(x = column, y = row, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("#b5de2b", "#3e4989", "#6ece58", "#35b779", "#26828e", "#D3D3D3", "#5A5A5A")) +
+  labs(x = "", y = "", title = "A4 2x2 T9") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(261,7608)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(239, 6953)) +
+  theme(plot.title = element_text(size=10))
+
+T12_A4_2x2_plot <- ggplot(T12_mutate_A4_2x2, aes(x = row, y = column, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("#b5de2b", "#3e4989", "#6ece58", "#35b779", "#26828e", "#D3D3D3", "#5A5A5A")) +
+  labs(x = "", y = "", title = "A4 2x2 T12") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(232, 6766)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(215,6264)) +
+  theme(plot.title = element_text(size=10))
+
+
+T0_A4_2x2_plot
+
+T3_A4_2x2_plot
+
+T6_A4_2x2_plot
+
+T9_A4_2x2_plot
+
+T12_A4_2x2_plot
+
+```
+
+### B2 Open
+
+
+### C2 Open
+
+```{r}
+# divide out by timepoint
+
+T0_mutate_C2_open <- C2_open_annual_mutate %>%
+  subset(timepoint == 'T0')
+
+T3_mutate_C2_open <- C2_open_annual_mutate %>%
+  subset(timepoint == 'T3')
+
+T6_mutate_C2_open <- C2_open_annual_mutate %>%
+  subset(timepoint == 'T6')
+
+T9_mutate_C2_open <- C2_open_annual_mutate %>%
+  subset(timepoint == 'T9')
+
+T12_mutate_C2_open <- C2_open_annual_mutate %>%
+  subset(timepoint == 'T12')
+```
+
+```{r}
+#reverse row and column factors as needed. This will be different for each, as we need to align each timepoint so they all have the same orientation. Even if the orientation is the same for each plot on Coral Net, Coral Net has the (0,0) on the top left corner, where R automatically puts (0,0) in the bottom left corner. This must be accounted for. 
+
+# use %>% mutate(column = fct_rev(column)); be careful if rerunning code, you have to rerun from beginning (making rows/columns a factor), or it will un/re reverse when you rerun. 
+
+# no edits needed for T0 
+
+T3_mutate_C2_open <- T3_mutate_C2_open %>%
+  mutate(row = fct_rev(row))
+
+T6_mutate_C2_open <- T6_mutate_C2_open %>%
+  mutate(row = fct_rev(row)) %>%
+  mutate(column = fct_rev(column))
+
+T9_mutate_C2_open <- T9_mutate_C2_open %>%
+  mutate(row = fct_rev(row))
+
+T12_mutate_C2_open <- T12_mutate_C2_open %>%
+  mutate(row = fct_rev(row)) %>%
+  mutate(column = fct_rev(column))
+```
+
+
+```{r}
+T0_C2_open_plot <- ggplot(T0_mutate_C2_open, aes(x = row, y = column, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("light green", "light grey", "dark grey")) +
+  labs(x = "", y = "", title = "C2 Open T0") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(212,6177)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(206, 6012)) +
+  theme(plot.title = element_text(size=10))
+
+T3_C2_open_plot <- ggplot(T3_mutate_C2_open, aes(x = column, y = row, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("light green", "light grey", "dark grey")) +
+  labs(x = "", y = "", title = "C2 Open T3") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(170, 4948)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(184, 5358)) +
+  theme(plot.title = element_text(size=10))
+
+T6_C2_open_plot <- ggplot(T6_mutate_C2_open, aes(x = row, y = column, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("light green", "dark green", "light grey", "dark grey")) +
+  labs(x = "", y = "", title = "C2 Open T6") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(217,6329)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(232, 6766)) +
+  theme(plot.title = element_text(size=10))
+
+T9_C2_open_plot <- ggplot(T9_mutate_C2_open, aes(x = column, y = row, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("light green", "dark green", "light grey", "dark grey")) +
+  labs(x = "", y = "", title = "C2 Open T9") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(200,5829)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(231, 6713)) +
+  theme(plot.title = element_text(size=10))
+
+T12_C2_open_plot <- ggplot(T12_mutate_C2_open, aes(x = row, y = column, fill = lobo_presence)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("light green", "dark green", "light grey", "dark grey")) +
+  labs(x = "", y = "", title = "C2 Open T12") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(207,6041)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(232, 6766)) +
+  theme(plot.title = element_text(size=10))
+
+
+T0_C2_open_plot
+
+T3_C2_open_plot
+
+T6_C2_open_plot
+
+T9_C2_open_plot
+
+T12_C2_open_plot
+
+```
+
+```{r}
+ggarrange(T0_C2_2x2_plot, T3_C2_2x2_plot, T6_C2_2x2_plot, T9_C2_2x2_plot, T12_C2_2x2_plot, T0_C2_open_plot, T3_C2_open_plot, T6_C2_open_plot, T9_C2_open_plot, T12_C2_open_plot, ncol = 5, nrow = 2, common.legend = TRUE)
+```
+
+```{r}
+ggarrange(T0_C2_2x2_plot, T3_C2_2x2_plot, T6_C2_2x2_plot, T9_C2_2x2_plot, T12_C2_2x2_plot, T0_A4_2x2_plot, T3_A4_2x2_plot, T6_A4_2x2_plot, T9_A4_2x2_plot, T12_A4_2x2_plot, ncol = 5, nrow = 2, common.legend = TRUE)
+```
+
+
+
+
+### D1 Open
+
+
+
+
+```{r}
+library(here)
+
+T0_LS <- read_csv(here("data", "A4_2x2_annotations", "annotations_T0_largespatial.csv")) %>%
+  clean_names()
+
+
+T0_LS_mutate <- transform(T0_LS,
+                       label = as.factor(label),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint))
+
+T0_LS_mutate <- T0_LS_mutate %>%
+  mutate(row = factor(row, levels =c("4732", "3596", "2460", "1324", "188")))
+
+
+T0_LS_mutate_plot <- ggplot(T0_LS_mutate, aes(x = row, y = column, fill = label)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("#FFF5EB", "lavender", "#D3D3D3", "#5A5A5A")) +
+  labs(x = "", y = "", title = " A4 2x2 T0") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(215,5399)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(188,4732)) +
+  theme(plot.title = element_text(size=10))
+
+T0_LS_mutate_plot
+```
+
+```{r}
+T6_LS <- read_csv(here("data", "A4_2x2_annotations", "annotations_T6_largespatial.csv")) %>%
+  clean_names()
+
+
+T6_LS_mutate <- transform(T6_LS,
+                       label = as.factor(label),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint))
+
+T6_LS_mutate <- T6_LS_mutate %>%
+  mutate(row = factor(row, levels =c("5832","4432", "3032", "1632", "232")))
+
+T6_LS_mutate_plot <- ggplot(T6_LS_mutate, aes(x = column, y = row, fill = label)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("#FFF5EB", "#33A02C","#B2DF8A","lavender")) +
+  labs(x = "", y = "", title = "A4 2x2 T6") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(232,5832)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(221, 5549)) +
+  theme(plot.title = element_text(size=10))
+
+T6_LS_mutate_plot
+```
+
+
+```{r}
+
+T9_LS <- read_csv(here("data", "A4_2x2_annotations", "annotations_T9_largespatial.csv")) %>%
+  clean_names()
+
+
+T9_LS_mutate <- transform(T9_LS,
+                       label = as.factor(label),
+                       row = as.factor(row),
+                       column = as.factor(column),
+                       timepoint = as.factor(timepoint))
+
+T9_LS_mutate <- T9_LS_mutate %>%
+  mutate(row = factor(row, levels =c("6558","4984", "3410", "1835", "261")))
+
+
+T9_LS_mutate_plot <- ggplot(T9_LS_mutate, aes(x = column, y = row, fill = label)) +
+  geom_tile(color = "white", size = 0.25) +
+  coord_equal() +
+  scale_fill_manual(values = c("#FFF5EB", "#33A02C","#B2DF8A","lavender")) +
+  labs(x = "", y = "", title = "A4 2x2 T9") +
+  scale_y_discrete(expand = c(0,0),
+                   breaks = c(261,6558)) +
+  scale_x_discrete(expand = c(0,0),
+                   breaks = c(239, 5994)) +
+  theme(plot.title = element_text(size=10))
+
+T9_LS_mutate_plot
+```
+
+```{r}
+x <- ggarrange(T0_LS_mutate_plot, T6_LS_mutate_plot, T9_LS_mutate_plot, ncol = 3, legend = FALSE)
+
+x
+
+```
+
